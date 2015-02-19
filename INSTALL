@@ -1,0 +1,12 @@
+Voiceid
+==============
+
+
+To install just type, as superuser:
+	python setup.py install
+
+Prior to install, on ubuntu, run the following:
+  sudo apt-get install openjdk-7-jdk gstreamer0.10-plugins-base \
+    gstreamer0.10-plugins-good gstreamer0.10-plugins-bad gstreamer0.10-plugins-ugly \
+    gstreamer-tools sox mplayer python-setuptools
+  pip install MplayerCtrl
