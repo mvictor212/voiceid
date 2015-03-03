@@ -251,7 +251,7 @@ class Cluster(object):
         """Get the cluster name assigned by the diarization process."""
         return self._label
 
-    def get_best_speaker(self):
+    def get_best_speaker(self, max_val=-33.0, mean_distance_thresh=0.49, distance_thresh=0.07):
         """Get the best speaker for the cluster according to the scores.
          If the speaker'spk score is lower than a fixed threshold or is too
          close to the second best matching voice,
@@ -259,7 +259,6 @@ class Cluster(object):
 
          :rtype: string
          :returns: the best speaker matching the cluster wav"""
-        max_val = -33.0
         try:
             self.value = max(self.speakers.values())
         except ValueError:
@@ -278,13 +277,13 @@ class Cluster(object):
             thres = max_val - distance
         else: thres = max_val
         
-        if self.value >= thres and mean_distance > .49:
+        if self.value >= thres and mean_distance > mean_distance_thresh:
             for spk in self.speakers:
                 if self.speakers[spk] == self.value:
                     _speaker = spk
                     break
        
-        if distance > -1 and distance < .07:
+        if distance > -1 and distance < distance_thresh:
             _speaker = 'unknown'
             
         return _speaker
@@ -516,7 +515,7 @@ class Voiceid(object):
             raise Exception('ERROR: Failed load dict, maybe in wrong format!')
         return vid
 
-    def __init__(self, vdb, filename, single=False):
+    def __init__(self, vdb, filename, single=False, h_par=3, c_par=1.5):
         """
         :type vdb: object
         :param vdb: the VoiceDB database instance
@@ -542,7 +541,7 @@ class Voiceid(object):
         self._set_filename(filename)
         self._status = 0
         self._single = single
-        self._diar_conf = (3, 1.5)
+        self._diar_conf = (h_par, c_par)
 
     def __getitem__(self, key):
         return self._clusters.__getitem__(key)
@@ -791,7 +790,7 @@ class Voiceid(object):
     def _extract_clusters(self):
         extract_clusters(self._basename + '.seg', self._clusters)
 
-    def _match_clusters(self, interactive=False, quiet=False):
+    def _match_clusters(self, interactive=False, quiet=False, max_val=-33.0, mean_distance_thresh=0.49, distance_thresh=0.07):
         """Match for voices in the db"""
         basename = self.get_file_basename()
         #merging segments wave files for every cluster
@@ -821,7 +820,7 @@ class Voiceid(object):
                     print "**********************************"
                     print "speaker ", clu
                     self[clu].print_segments()
-            speakers[clu] = self[clu].get_best_speaker()
+            speakers[clu] = self[clu].get_best_speaker(max_val=max_val, mean_distance_thresh=mean_distance_thresh, distance_thresh=distance_thresh)
             self[clu].set_speaker(speakers[clu])
             """
             if not interactive:
@@ -959,7 +958,7 @@ class Voiceid(object):
                 # resplit the original wave file according to the new clusters
                 self._to_trim()
 
-    def extract_speakers(self, interactive=False, quiet=False, thrd_n=1):
+    def extract_speakers(self, interactive=False, quiet=False, thrd_n=1, max_val=-33.0, mean_distance_thresh=0.49, distance_thresh=0.07):
         """Identify the speakers in the audio wav according to a speakers
         database. If a speaker doesn't match any speaker in the database then
         sets it as unknown. In interactive mode it asks the user to set
@@ -1000,14 +999,15 @@ class Voiceid(object):
         # search for every identified cluster if there is 
         # a relative model voice in the db
         self._cluster_matching(diarization_time, interactive, quiet, thrd_n,
-                               start_time)
+                               start_time, max_val=max_val, mean_distance_thresh=mean_distance_thresh,
+                               distance_thresh=distance_thresh)
 
     def _cluster_matching(self, diarization_time=None, interactive=False,
-                          quiet=False, thrd_n=1, start_t=0):
+                          quiet=False, thrd_n=1, start_t=0, max_val=-33.0, mean_distance_thresh=0.49, distance_thresh=0.07):
         """Match for voices in the db"""
         basename = self.get_file_basename()
         self._extract_clusters()
-        self._match_clusters(interactive, quiet)
+        self._match_clusters(interactive, quiet, max_val=max_val, mean_distance_thresh=mean_distance_thresh, distance_thresh=distance_thresh)
 #        if not interactive:
 #            #merging
 #            self.automerge_clusters()
